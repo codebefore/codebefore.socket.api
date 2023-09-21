@@ -1,34 +1,69 @@
-using codebefore.socket.api;
-using Microsoft.AspNetCore.SignalR;
+using System.Net;
+using System.Net.WebSockets;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddSignalR();
 var app = builder.Build();
+app.UseWebSockets();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+var connections = new List<WebSocket>();
+
+
+app.Map("/ws", async context =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    if (context.WebSockets.IsWebSocketRequest)
+    {
+        var curName = context.Request.Query["name"];
+
+        using var ws = await context.WebSockets.AcceptWebSocketAsync();
+
+        connections.Add(ws);
+
+        await Broadcast($"{curName} joined the room");
+        await Broadcast($"{connections.Count} users connected");
+        await ReceiveMessage(ws,
+            async (result, buffer) =>
+            {
+                if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    await Broadcast(curName + ": " + message);
+                }
+                else if (result.MessageType == WebSocketMessageType.Close || ws.State == WebSocketState.Aborted)
+                {
+                    connections.Remove(ws);
+                    await Broadcast($"{curName} left the room");
+                    await Broadcast($"{connections.Count} users connected");
+                    await ws.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+                }
+            });
+    }
+    else
+    {
+        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+    }
+});
+async Task ReceiveMessage(WebSocket socket, Action<WebSocketReceiveResult, byte[]> handleMessage)
+{
+    var buffer = new byte[1024 * 4];
+    while (socket.State == WebSocketState.Open)
+    {
+        var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+        handleMessage(result, buffer);
+    }
 }
 
-app.UseHttpsRedirection();
-app.UseRouting();
-
-
-app.MapGet("/send/{message}", (string message, IHubContext<NotifyHub> _hubContext) =>
+async Task Broadcast(string message)
 {
-    _hubContext.Clients.All.SendAsync("codebeforesocket", message);
-    return message;
-});
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapHub<NotifyHub>("/api/hubs/notifynumber");
-});
-app.Run();
+    var bytes = Encoding.UTF8.GetBytes(message);
+    foreach (var socket in connections)
+    {
+        if (socket.State == WebSocketState.Open)
+        {
+            var arraySegment = new ArraySegment<byte>(bytes, 0, bytes.Length);
+            await socket.SendAsync(arraySegment, WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+    }
+}
 
+await app.RunAsync();

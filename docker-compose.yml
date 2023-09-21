@@ -4,7 +4,7 @@ services:
   codebefore-socket-api:
     build: .
     container_name: codebefore-socket-api
-    image: codebefore-socket-api:0.0.1
+    image: codebefore-socket-api:0.0.2
     restart: unless-stopped
     ports: 
      - "9090:80"
