@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  codebefore-socket-api:
+    build: .
+    container_name: codebefore-socket-api
+    image: codebefore-socket-api:0.0.1
+    restart: unless-stopped
+    ports: 
+     - "9090:80"
+     - "9091:443"
