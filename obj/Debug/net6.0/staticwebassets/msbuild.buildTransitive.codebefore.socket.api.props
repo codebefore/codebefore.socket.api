@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\buildMultiTargeting\codebefore.socket.api.props" />
+</Project>

@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "aFwFPcC9ixVFsBV6/23z7SpAo0bRGNNdnzl3BmD9sUU=",
+  "Source": "codebefore.socket.api",
+  "BasePath": "_content/codebefore.socket.api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

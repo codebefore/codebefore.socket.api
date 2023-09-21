@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\codebefore.socket.api.props" />
+</Project>
